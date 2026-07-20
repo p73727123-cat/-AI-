@@ -25,6 +25,7 @@
   </style>
 </head>
 <body>
+  <audio id="bgm" src="./low-quest-ambient.wav" loop preload="auto"></audio>
   <main class="shell" id="app">
     <header class="topbar">
       <div class="avatar" aria-hidden="true">🦆</div>
@@ -141,7 +142,7 @@
 
     const STORAGE='fifteen-classics-rpg-round1-v1';
     const state=Object.assign({index:0,solved:{},wrong:[],exp:0,music:false,round1Complete:false},JSON.parse(localStorage.getItem(STORAGE)||'{}'));state.music=false;
-    const $=id=>document.getElementById(id); const mapView=$('mapView'),stageView=$('stageView'),optionsEl=$('options'),feedback=$('feedback'); let audioCtx=null,musicTimer=null;
+    const $=id=>document.getElementById(id); const mapView=$('mapView'),stageView=$('stageView'),optionsEl=$('options'),feedback=$('feedback'),bgm=$('bgm'); let audioCtx=null,musicTimer=null;
     function save(){localStorage.setItem(STORAGE,JSON.stringify(state));}
     function level(){return Math.min(100,1+Math.floor(state.exp/10));}
     function solvedCount(){return Object.keys(state.solved).length;}
@@ -165,8 +166,7 @@
     function stageClear(){state.round1Complete=true;save();updateMap();const misses=[...new Set(state.wrong.map(x=>x.id))]; const weakness=misses.length?'需回顧：'+misses.map(id=>`第 ${id} 題`).join('、'):'全程無失誤，對古文基礎與修辭辨析掌握良好。';modal(`<h2>Stage Clear！</h2><span class="clear-stamp">已稱霸</span><p>李斯魔將已被擊敗。第一回全 10 題完成，第二回「鴻門戰場」已解鎖！</p><h3>錯題記錄</h3>${misses.length?`<ul class="error-list">${misses.map(id=>`<li>第 ${id} 題：可由地圖重新挑戰複習。</li>`).join('')}</ul>`:'<p>沒有錯題紀錄。</p>'}<h3>弱點分析</h3><p>${weakness}</p><button class="primary" id="clearMap">前往地圖</button>`);$('clearMap').onclick=()=>{closeModal();openMap();};}
     function ensureAudio(){if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();}
     function playSfx(good){if(!state.music)return;ensureAudio();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type='square';osc.frequency.value=good?660:180;gain.gain.setValueAtTime(.045,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.16);osc.connect(gain).connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+.16);}
-    function musicTick(){if(!state.music)return;ensureAudio();clearInterval(musicTimer);const notes=[110,98,87.31,98,123.47,98];let n=0;const playAmbient=()=>{const now=audioCtx.currentTime,root=notes[n++%notes.length];[[root,'triangle',.05],[root*.5,'sine',.03],[root*1.498,'sine',.018],[root*2,'sine',.012]].forEach(([frequency,type,volume],index)=>{const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=type;osc.frequency.value=frequency;osc.detune.value=index===2?5:0;gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(volume,now+.72);gain.gain.exponentialRampToValueAtTime(.0001,now+2.65);osc.connect(gain).connect(audioCtx.destination);osc.start(now);osc.stop(now+2.7);});};playAmbient();musicTimer=setInterval(playAmbient,2800);}
-    function toggleMusic(){state.music=!state.music;save();const musicButton=$('musicBtn');musicButton.setAttribute('aria-pressed',state.music);musicButton.textContent=state.music?'🔊':'🔇';musicButton.title=state.music?'關閉低沉背景音樂':'開啟低沉背景音樂';if(state.music){ensureAudio();audioCtx.resume().then(musicTick);}else{clearInterval(musicTimer);musicTimer=null;}}
+    function toggleMusic(){state.music=!state.music;const musicButton=$('musicBtn');musicButton.setAttribute('aria-pressed',state.music);musicButton.textContent=state.music?'🔊':'🔇';musicButton.title=state.music?'關閉低沉背景音樂':'開啟低沉背景音樂';if(state.music){bgm.volume=.62;const playback=bgm.play();if(playback)playback.catch(()=>{state.music=false;musicButton.setAttribute('aria-pressed','false');musicButton.textContent='🔇';musicButton.title='開啟低沉背景音樂';});}else{bgm.pause();bgm.currentTime=0;}save();}
     $('openStage').onclick=openStage;$('secondStage').onclick=()=>modal('<h2>鴻門戰場已解鎖！</h2><p>第一回已稱霸。第二回的完整題庫與 Boss 戰將在下一次建置後開放。</p>');$('backMap').onclick=openMap;$('submitBtn').onclick=submit;$('explainBtn').onclick=()=>showFeedback(false);$('nextBtn').onclick=next;$('musicBtn').onclick=toggleMusic;$('profileBtn').onclick=profile;$('summonBtn').onclick=summon;$('modal').addEventListener('click',e=>{if(e.target===$('modal'))closeModal();});updateHud();updateMap();if(state.music)$('musicBtn').setAttribute('aria-pressed','true');
     // 第二回起使用各自獨立的答題紀錄，保留第一回既有的 localStorage 資料。
     let activeRound=1;
