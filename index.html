@@ -25,6 +25,7 @@
   </style>
 </head>
 <body>
+  <audio id="bgm" src="./musely-Molten%20Hero%27s%20Ascent.mp3" loop preload="metadata"></audio>
   <main class="shell" id="app">
     <header class="topbar">
       <div class="avatar" aria-hidden="true">🦆</div>
@@ -141,7 +142,7 @@
 
     const STORAGE='fifteen-classics-rpg-round1-v1';
     const state=Object.assign({index:0,solved:{},wrong:[],exp:0,music:false,round1Complete:false},JSON.parse(localStorage.getItem(STORAGE)||'{}'));
-    const $=id=>document.getElementById(id); const mapView=$('mapView'),stageView=$('stageView'),optionsEl=$('options'),feedback=$('feedback'); let audioCtx=null,musicTimer=null;
+    const $=id=>document.getElementById(id); const mapView=$('mapView'),stageView=$('stageView'),optionsEl=$('options'),feedback=$('feedback'),bgm=$('bgm'); let audioCtx=null,musicTimer=null;
     function save(){localStorage.setItem(STORAGE,JSON.stringify(state));}
     function level(){return Math.min(100,1+Math.floor(state.exp/10));}
     function solvedCount(){return Object.keys(state.solved).length;}
@@ -166,7 +167,7 @@
     function ensureAudio(){if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();}
     function playSfx(good){if(!state.music)return;ensureAudio();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type='square';osc.frequency.value=good?660:180;gain.gain.setValueAtTime(.045,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.16);osc.connect(gain).connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+.16);}
     function musicTick(){if(!state.music)return;ensureAudio();const notes=[261.6,329.6,392,329.6,293.7,349.2,440,349.2];let n=0;musicTimer=setInterval(()=>{const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type='square';osc.frequency.value=notes[n++%notes.length];gain.gain.setValueAtTime(.018,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.18);osc.connect(gain).connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+.19)},260);}
-    function toggleMusic(){state.music=!state.music;save();$('musicBtn').setAttribute('aria-pressed',state.music);$('musicBtn').textContent=state.music?'🔊':'🔇';if(state.music){ensureAudio();audioCtx.resume();musicTick();}else{clearInterval(musicTimer);musicTimer=null;}}
+    function toggleMusic(){state.music=!state.music;save();$('musicBtn').setAttribute('aria-pressed',state.music);$('musicBtn').textContent=state.music?'🔊':'🔇';if(state.music){clearInterval(musicTimer);musicTimer=null;bgm.volume=.22;const playback=bgm.play();if(playback)playback.catch(()=>{ensureAudio();audioCtx.resume();musicTick();});}else{bgm.pause();bgm.currentTime=0;clearInterval(musicTimer);musicTimer=null;}}
     $('openStage').onclick=openStage;$('secondStage').onclick=()=>modal('<h2>鴻門戰場已解鎖！</h2><p>第一回已稱霸。第二回的完整題庫與 Boss 戰將在下一次建置後開放。</p>');$('backMap').onclick=openMap;$('submitBtn').onclick=submit;$('explainBtn').onclick=()=>showFeedback(false);$('nextBtn').onclick=next;$('musicBtn').onclick=toggleMusic;$('profileBtn').onclick=profile;$('summonBtn').onclick=summon;$('modal').addEventListener('click',e=>{if(e.target===$('modal'))closeModal();});updateHud();updateMap();if(state.music)$('musicBtn').setAttribute('aria-pressed','true');
     // 第二回起使用各自獨立的答題紀錄，保留第一回既有的 localStorage 資料。
     let activeRound=1;
